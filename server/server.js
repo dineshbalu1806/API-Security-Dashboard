@@ -9,7 +9,8 @@ const { errorHandler } = require("./middleware/errorHandler");
 // Route imports
 const authRoutes = require("./routes/authRoutes");
 const projectRoutes = require("./routes/projectRoutes");
-// NOTE: scanRoutes and reportRoutes are added in Session 2 (scan engine + AI/report agent)
+const scanRoutes = require("./routes/scanRoutes");
+require("./queue/scanQueue");
 
 const app = express();
 
@@ -35,6 +36,7 @@ app.get("/api/health", (req, res) => {
 // Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/projects", projectRoutes);
+app.use("/api/scans", scanRoutes);
 
 // 404 handler
 app.use((req, res) => {
