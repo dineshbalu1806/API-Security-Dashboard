@@ -1,8 +1,9 @@
 # API Security Testing Dashboard — Backend (Session 1)
 
-This is the **foundation layer** of the backend: schemas, auth, and project CRUD.
-Scan engine, AI recommendations, report generation, and real-time progress are
-built in later sessions (see prompts at the end of this file).
+This backend provides schemas, authentication, project CRUD, an asynchronous
+OWASP API scan engine, AI remediation recommendations, and PDF compliance
+reports. Real-time progress is built in a later session (see prompts at the end
+of this file).
 
 ## Setup
 
@@ -10,11 +11,14 @@ built in later sessions (see prompts at the end of this file).
 cd server
 npm install
 cp .env.example .env   # then fill in MONGO_URI and JWT_SECRET at minimum
-npm run dev             # requires nodemon (npm install -g nodemon), or npm start
+npm run dev             # API server
+# In a second terminal, with Redis running:
+npm run worker
 ```
 
-Requires a running MongoDB instance (local or Atlas). Redis is only needed
-once you add Session 2 (scan queue) — not required for this session.
+Requires running MongoDB and Redis instances. Configure `REDIS_HOST`,
+`REDIS_PORT`, and optionally `REDIS_PASSWORD` in `.env`. To enable AI
+recommendations, also set `ANTHROPIC_API_KEY`; `ANTHROPIC_MODEL` is optional.
 
 ## Folder Structure
 
@@ -29,8 +33,10 @@ server/
 │   ├── roleMiddleware.js      # Role-based access (restrictTo)
 │   └── errorHandler.js        # Centralized error responses + asyncHandler wrapper
 ├── utils/generateToken.js     # JWT signing helper
-├── services/scanModules/      # (empty — Session 2)
-├── queue/                     # (empty — Session 2)
+├── services/scanModules/      # independently testable OWASP test modules
+├── services/prompts/           # editable LLM prompts
+├── services/templates/         # editable PDF HTML template
+├── queue/                     # BullMQ queue and scan worker
 ├── seed/                      # (empty — Session 4)
 └── server.js                  # App entry point
 ```
@@ -60,6 +66,31 @@ All responses follow: `{ success: true/false, ...data or message }`
 
 Projects are scoped to the logged-in user (`userId` filter on every query).
 
+### Scans — `/api/scans` (all routes require `Authorization: Bearer <token>`)
+
+| Method | Route | Body/query | Response |
+|---|---|---|---|
+| POST | `/` | `{ projectId }` | `{ success, scanId, scan }` with status `queued` |
+| GET | `/` | `?projectId=<id>` optional | `{ success, count, scans }` |
+| GET | `/:id` | — | `{ success, scan }` including persisted findings |
+
+`POST /api/scans` returns immediately. The separate `npm run worker` process
+consumes the BullMQ job, safely probes the project's endpoints with GET
+requests, runs the seven scan modules, stores findings, and calculates a
+severity-weighted score from 0 to 100.
+
+### Recommendations and reports — `/api/scans` (private)
+
+| Method | Route | Response |
+|---|---|---|
+| POST | `/:id/generate-recommendations` | Generates and saves recommendations for all findings, with bounded concurrency |
+| GET | `/:id/report` | Downloads a styled PDF compliance report for a completed scan |
+
+Recommendations use the Anthropic API and provide a risk explanation plus
+three to five Node/Express remediation steps. Report generation includes the
+project name, scan date, score, OWASP Top 10 summary, and findings grouped by
+severity.
+
 ## Data Models
 
 - **User**: `name, email, passwordHash (hidden), role (admin/member)`
@@ -72,9 +103,6 @@ use them directly without any migration.
 
 ## What's NOT built yet (intentionally, for later sessions)
 
-- Scan trigger route + BullMQ worker + OWASP test modules
-- AI recommendation service (Anthropic API call per finding)
-- PDF compliance report generation (Puppeteer)
 - Socket.io / polling for live scan progress
 - Frontend (client/) — currently empty, Stitch export goes here
 - Seed script for demo data
