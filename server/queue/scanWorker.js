@@ -1,10 +1,17 @@
 require("dotenv").config();
 const { Worker } = require("bullmq");
+const Redis = require("ioredis");
 const Project = require("../models/Project");
 const Scan = require("../models/Scan");
 const Finding = require("../models/Finding");
 const connectDB = require("../config/db");
 const { connection } = require("./scanQueue");
+const progressPublisher = new Redis(connection);
+const progressChannel = "api-security-scan-progress";
+const publishScanState = (scanId, status) => progressPublisher.publish(
+  progressChannel,
+  JSON.stringify({ type: "state", scanId: scanId.toString(), status })
+);
 
 const modules = [
   { name: "BOLA", run: require("../services/scanModules/bola") },
@@ -63,17 +70,38 @@ const processScan = async (job) => {
   if (!project) throw new Error(`Project ${scan.projectId} not found`);
 
   await Scan.findByIdAndUpdate(scanId, { status: "running", startedAt: new Date() });
+  await publishScanState(scanId, "running");
   const endpoints = parseEndpoints(project);
   const findings = [];
 
   try {
     for (const module of modules) {
       await updateModule(scanId, module.name, "running");
-      for (const endpoint of endpoints) {
-        const result = await module.run({ project, endpoint, scan });
-        if (result) findings.push(result);
+      await progressPublisher.publish(progressChannel, JSON.stringify({
+        scanId: scanId.toString(),
+        module: module.name,
+        status: "running",
+      }));
+      try {
+        for (const endpoint of endpoints) {
+          const result = await module.run({ project, endpoint, scan });
+          if (result) findings.push(result);
+        }
+        await updateModule(scanId, module.name, "completed");
+        await progressPublisher.publish(progressChannel, JSON.stringify({
+          scanId: scanId.toString(),
+          module: module.name,
+          status: "completed",
+        }));
+      } catch (error) {
+        await updateModule(scanId, module.name, "failed");
+        await progressPublisher.publish(progressChannel, JSON.stringify({
+          scanId: scanId.toString(),
+          module: module.name,
+          status: "failed",
+        }));
+        throw error;
       }
-      await updateModule(scanId, module.name, "completed");
     }
 
     if (findings.length) {
@@ -87,12 +115,14 @@ const processScan = async (job) => {
       overallScore: calculateScore(findings),
       completedAt: new Date(),
     });
+    await publishScanState(scanId, "completed");
     return { scanId, findingCount: findings.length };
   } catch (error) {
     await Scan.findByIdAndUpdate(scanId, {
       status: "failed",
       errorMessage: error.message,
     });
+    await publishScanState(scanId, "failed");
     throw error;
   }
 };
@@ -108,6 +138,7 @@ connectDB().catch((error) => {
 
 const shutdown = async () => {
   await worker.close();
+  await progressPublisher.quit();
   process.exit(0);
 };
 process.on("SIGINT", shutdown);
