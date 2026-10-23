@@ -10,13 +10,17 @@ of this file).
 ```bash
 cd server
 npm install
-cp .env.example .env   # then fill in MONGO_URI and JWT_SECRET at minimum
+cp .env.example .env   # fill in MONGO_URI, JWT_SECRET, and Redis settings
 npm run dev             # API server
 # In a second terminal, with Redis running:
 npm run worker
+# In a third terminal for demo data:
+npm run seed
 ```
 
-Requires running MongoDB and Redis instances. Configure `REDIS_HOST`,
+Requires running MongoDB and Redis instances. Set `MONGO_URI` in `.env` to your
+MongoDB connection string (for a local instance:
+`mongodb://127.0.0.1:27017/api_security_dashboard`). Configure `REDIS_HOST`,
 `REDIS_PORT`, and optionally `REDIS_PASSWORD` in `.env`. To enable AI
 recommendations, also set `ANTHROPIC_API_KEY`; `ANTHROPIC_MODEL` is optional.
 
@@ -37,7 +41,8 @@ server/
 ├── services/prompts/           # editable LLM prompts
 ├── services/templates/         # editable PDF HTML template
 ├── queue/                     # BullMQ queue and scan worker
-├── seed/                      # (empty — Session 4)
+├── realtime/                  # Socket.io scan progress relay
+├── seed/                      # demo data seeding for local testing
 └── server.js                  # App entry point
 ```
 
@@ -91,6 +96,44 @@ three to five Node/Express remediation steps. Report generation includes the
 project name, scan date, score, OWASP Top 10 summary, and findings grouped by
 severity.
 
+## Run a local vulnerable API demo
+
+To create a new scan with repeatable findings under your own account, start the
+deliberately vulnerable sample API in a separate terminal:
+
+```bash
+cd server
+npm run demo:vulnerable-api
+```
+
+It listens only on `127.0.0.1:5001` and returns fake demo data. Keep it local;
+do not expose it to a network. In Sentinel, choose **Add an API to scan** and
+enter:
+
+- **Project name:** Vulnerable Demo API
+- **Base URL:** `http://127.0.0.1:5001`
+- **OpenAPI JSON:**
+
+```json
+{
+  "openapi": "3.0.0",
+  "info": { "title": "Vulnerable Demo API", "version": "1.0.0" },
+  "paths": {
+    "/api/user/42": { "get": { "responses": { "200": { "description": "Demo user" } } } },
+    "/api/admin/audit": { "get": { "responses": { "200": { "description": "Demo audit data" } } } },
+    "/api/orders": { "post": { "responses": { "200": { "description": "Demo order" } } } },
+    "/api/search": { "get": { "responses": { "200": { "description": "Demo search" } } } }
+  }
+}
+```
+
+Choose **Create and scan**. The worker must be running and connected to Redis.
+This local target is intentionally unsafe and returns predictable findings
+such as missing authentication, exposed fake sensitive fields, missing security
+headers, unrestricted requests, mass assignment risk, and an injection-like
+error response. Each finding includes a built-in remediation suggestion; AI
+recommendations can optionally be generated if `ANTHROPIC_API_KEY` is set.
+
 ## Data Models
 
 - **User**: `name, email, passwordHash (hidden), role (admin/member)`
@@ -101,11 +144,11 @@ severity.
 Scan and Finding schemas are already defined so Session 2's scan engine can
 use them directly without any migration.
 
-## What's NOT built yet (intentionally, for later sessions)
+## Included in the current build
 
-- Socket.io / polling for live scan progress
-- Frontend (client/) — currently empty, Stitch export goes here
-- Seed script for demo data
+- Socket.io live scan progress events for module-level updates
+- Ready-to-run demo seed script for a demo user, project, and full scan
+- Frontend integration points in the client app for the demo experience
 
 ## Quick test with curl
 

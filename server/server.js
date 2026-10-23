@@ -1,5 +1,6 @@
 require("dotenv").config();
 const express = require("express");
+const { createServer } = require("http");
 const cors = require("cors");
 const morgan = require("morgan");
 const helmet = require("helmet");
@@ -10,9 +11,12 @@ const { errorHandler } = require("./middleware/errorHandler");
 const authRoutes = require("./routes/authRoutes");
 const projectRoutes = require("./routes/projectRoutes");
 const scanRoutes = require("./routes/scanRoutes");
+const { initScanProgress } = require("./realtime/scanProgress");
 require("./queue/scanQueue");
 
 const app = express();
+const httpServer = createServer(app);
+const scanProgress = initScanProgress(httpServer);
 
 // Connect to MongoDB
 connectDB();
@@ -47,8 +51,17 @@ app.use((req, res) => {
 app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
+httpServer.listen(PORT, () => {
   console.log(`Server running in ${process.env.NODE_ENV || "development"} mode on port ${PORT}`);
+});
+
+process.on("SIGINT", async () => {
+  await scanProgress.close();
+  httpServer.close(() => process.exit(0));
+});
+process.on("SIGTERM", async () => {
+  await scanProgress.close();
+  httpServer.close(() => process.exit(0));
 });
 
 module.exports = app;

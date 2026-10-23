@@ -1,0 +1,1 @@
+export default function SeverityBadge({ severity }) { return <span className={`severity-badge ${severity?.toLowerCase()}`}>{severity}</span>; }
