@@ -19,6 +19,20 @@ const ProjectSchema = new mongoose.Schema(
       required: [true, "API base URL is required"],
       trim: true,
     },
+    apiAuth: {
+      type: {
+        headerName: { type: String, required: true },
+        iv: { type: String, required: true },
+        encryptedValue: { type: String, required: true },
+        authTag: { type: String, required: true },
+      },
+      default: undefined,
+      select: false,
+    },
+    authorizedAt: {
+      type: Date,
+      required: true,
+    },
     // Raw OpenAPI/Swagger spec (JSON) OR a manually pasted endpoint list.
     openApiSpec: {
       type: mongoose.Schema.Types.Mixed,

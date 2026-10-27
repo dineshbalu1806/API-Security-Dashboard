@@ -6,6 +6,7 @@ import NewProject from "./pages/NewProject";
 import ScanProgress from "./pages/ScanProgress";
 import Findings from "./pages/Findings";
 import Report from "./pages/Report";
+import ScanHistory from "./pages/ScanHistory";
 import Shell from "./components/Shell";
 
 function ProtectedRoute() {
@@ -19,6 +20,7 @@ export default function App() {
     <Route path="/login" element={<Login />} />
     <Route element={<ProtectedRoute />}>
       <Route path="/dashboard" element={<Dashboard />} />
+      <Route path="/scans" element={<ScanHistory />} />
       <Route path="/projects/new" element={<NewProject />} />
       <Route path="/scan/:scanId" element={<ScanProgress />} />
       <Route path="/findings/:scanId" element={<Findings />} />

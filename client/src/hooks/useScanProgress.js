@@ -2,7 +2,11 @@ import { useEffect, useState } from "react";
 import { io } from "socket.io-client";
 import api from "../services/api";
 
-const socketUrl = (import.meta.env.VITE_API_URL || "http://localhost:5000/api").replace(/\/api\/?$/, "");
+const configuredApiUrl = import.meta.env.VITE_API_URL || "http://localhost:5000";
+const apiOrigin = /^https?:\/\//i.test(configuredApiUrl)
+  ? configuredApiUrl
+  : `https://${configuredApiUrl}`;
+const socketUrl = apiOrigin.replace(/\/api\/?$/, "").replace(/\/+$/, "");
 
 export default function useScanProgress(scanId) {
   const [scan, setScan] = useState(null);
@@ -45,9 +49,7 @@ export default function useScanProgress(scanId) {
         };
       });
     });
-    pollTimer = window.setInterval(() => {
-      if (socket.connected) refresh();
-    }, 5000);
+    pollTimer = window.setInterval(refresh, 5000);
 
     return () => {
       active = false;

@@ -66,7 +66,7 @@ const processScan = async (job) => {
   const scan = await Scan.findById(scanId);
   if (!scan) throw new Error(`Scan ${scanId} not found`);
 
-  const project = await Project.findById(scan.projectId);
+  const project = await Project.findById(scan.projectId).select("+apiAuth");
   if (!project) throw new Error(`Project ${scan.projectId} not found`);
 
   await Scan.findByIdAndUpdate(scanId, { status: "running", startedAt: new Date() });
@@ -127,21 +127,29 @@ const processScan = async (job) => {
   }
 };
 
-const worker = new Worker("api-security-scans", processScan, { connection, concurrency: 1 });
-worker.on("completed", (job, result) => console.log(`Scan ${job.data.scanId} completed`, result));
-worker.on("failed", (job, error) => console.error(`Scan ${job?.data?.scanId || "unknown"} failed`, error));
+let worker;
 
-connectDB().catch((error) => {
-  console.error("Unable to connect to MongoDB for scan worker", error);
-  process.exitCode = 1;
-});
+const startWorker = async () => {
+  await connectDB();
+  worker = new Worker("api-security-scans", processScan, { connection, concurrency: 1 });
+  worker.on("completed", (job, result) => console.log(`Scan ${job.data.scanId} completed`, result));
+  worker.on("failed", (job, error) => console.error(`Scan ${job?.data?.scanId || "unknown"} failed`, error));
+  return worker;
+};
 
 const shutdown = async () => {
-  await worker.close();
+  if (worker) await worker.close();
   await progressPublisher.quit();
   process.exit(0);
 };
 process.on("SIGINT", shutdown);
 process.on("SIGTERM", shutdown);
 
-module.exports = { parseEndpoints, calculateScore, processScan, worker };
+if (require.main === module) {
+  startWorker().catch((error) => {
+    console.error("Unable to start scan worker", error);
+    process.exit(1);
+  });
+}
+
+module.exports = { parseEndpoints, calculateScore, processScan, startWorker };

@@ -7,9 +7,11 @@ const {
 	generateRecommendations,
 	downloadReport,
 } = require("../controllers/scanController");
+const { getDashboardOverview } = require("../controllers/dashboardController");
 
 const router = express.Router();
 router.use(protect);
+router.get("/overview", getDashboardOverview);
 router.post("/", createScan);
 router.get("/", getScans);
 router.post("/:id/generate-recommendations", generateRecommendations);

@@ -1,4 +1,6 @@
 const axios = require("axios");
+const { decryptCredential } = require("../credentialVault");
+const { createTargetAgent } = require("./targetPolicy");
 
 const SAFE_TIMEOUT = Number(process.env.SCAN_REQUEST_TIMEOUT || 5000);
 
@@ -13,26 +15,47 @@ const recommendations = {
 };
 
 const makeUrl = (project, endpoint) => {
-  const base = project.apiBaseUrl.replace(/\/$/, "");
-  const path = endpoint.path.startsWith("/") ? endpoint.path : `/${endpoint.path}`;
-  return new URL(path, `${base}/`).toString();
+  const base = new URL(project.apiBaseUrl);
+  const basePath = base.pathname.replace(/\/+$/, "");
+  const endpointPath = endpoint.path.replace(/^\/+/, "");
+  base.pathname = `${basePath}/${endpointPath}`;
+  return base.toString();
 };
 
 const probe = async (project, endpoint, options = {}) => {
   const url = makeUrl(project, endpoint);
+  const { unauthenticated = false, ...requestOptions } = options;
+  const headers = {
+    Accept: "application/json",
+    "User-Agent": "API-Security-Dashboard-Scanner/1.0",
+  };
+  if (!unauthenticated && project.apiAuth) {
+    headers[project.apiAuth.headerName] = decryptCredential(project.apiAuth);
+  }
+
+  const targetAgent = await createTargetAgent(url);
   try {
     const response = await axios({
       url,
       method: "GET",
       timeout: SAFE_TIMEOUT,
-      maxRedirects: 3,
+      maxRedirects: 0,
       validateStatus: () => true,
-      headers: { Accept: "application/json", "User-Agent": "API-Security-Dashboard-Scanner/1.0" },
-      ...options,
+      proxy: false,
+      httpAgent: targetAgent || undefined,
+      httpsAgent: targetAgent || undefined,
+      ...requestOptions,
+      headers: { ...headers, ...requestOptions.headers },
     });
     return { response, url };
   } catch (error) {
-    return { error, url };
+    const failure = new Error(
+      `Scan request failed${error.code ? ` (${error.code})` : ""}`
+    );
+    if (error.code) failure.code = error.code;
+    throw failure;
+  } finally {
+    targetAgent?.destroy();
   }
 };
 
@@ -40,7 +63,7 @@ const finding = (module, severity, endpoint, description, evidence) => ({
   owaspCategory: module,
   severity,
   endpoint: endpoint.path,
-  method: endpoint.method || "GET",
+  method: "GET",
   description,
   evidence: evidence ? String(evidence).slice(0, 2000) : undefined,
   aiRecommendation: recommendations[module],

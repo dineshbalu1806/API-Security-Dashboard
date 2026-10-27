@@ -18,9 +18,6 @@ const app = express();
 const httpServer = createServer(app);
 const scanProgress = initScanProgress(httpServer);
 
-// Connect to MongoDB
-connectDB();
-
 // Core middleware
 app.use(helmet());
 app.use(
@@ -34,7 +31,12 @@ app.use(morgan(process.env.NODE_ENV === "development" ? "dev" : "combined"));
 
 // Health check
 app.get("/api/health", (req, res) => {
-  res.status(200).json({ success: true, message: "API is running" });
+  const mongoose = require("mongoose");
+  const ready = mongoose.connection.readyState === 1;
+  res.status(ready ? 200 : 503).json({
+    success: ready,
+    message: ready ? "API is ready" : "Database connection is not ready",
+  });
 });
 
 // Routes
@@ -51,9 +53,12 @@ app.use((req, res) => {
 app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
-httpServer.listen(PORT, () => {
-  console.log(`Server running in ${process.env.NODE_ENV || "development"} mode on port ${PORT}`);
-});
+const startServer = async () => {
+  await connectDB();
+  httpServer.listen(PORT, () => {
+    console.log(`Server running in ${process.env.NODE_ENV || "development"} mode on port ${PORT}`);
+  });
+};
 
 process.on("SIGINT", async () => {
   await scanProgress.close();
@@ -64,4 +69,12 @@ process.on("SIGTERM", async () => {
   httpServer.close(() => process.exit(0));
 });
 
+if (require.main === module) {
+  startServer().catch((error) => {
+    console.error("Unable to start API server", error);
+    process.exit(1);
+  });
+}
+
 module.exports = app;
+module.exports.startServer = startServer;

@@ -66,7 +66,7 @@ export default function Login() {
           <button className="primary-button full" disabled={busy}>{busy ? (isSignUp ? "Creating account..." : "Signing in...") : (isSignUp ? "Create account" : "Sign in")}<ArrowRight size={17} /></button>
         </form>
         <button type="button" className="auth-switch" onClick={changeMode}>{isSignUp ? "Already have an account? Sign in" : "New to Sentinel? Create an account"}</button>
-        {!isSignUp && <small className="form-note">Demo credentials: demo@example.com / password123</small>}
+        {!isSignUp && <small className="form-note">Use your account credentials, or create an account to get started.</small>}
       </div>
     </main>
   </div>;

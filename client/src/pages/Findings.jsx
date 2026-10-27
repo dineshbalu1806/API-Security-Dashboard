@@ -4,6 +4,7 @@ import { ArrowLeft, Download, SlidersHorizontal } from "lucide-react";
 import api from "../services/api";
 import FindingsTable from "../components/FindingsTable";
 import SeverityBadge from "../components/SeverityBadge";
+import StatCard from "../components/StatCard";
 
 export default function Findings() {
   const { scanId } = useParams();
@@ -31,6 +32,7 @@ export default function Findings() {
   }, [scanId]);
 
   const allFindings = scan?.findings || [];
+  const completedModules = scan?.moduleProgress?.filter((item) => item.status === "completed").length || 0;
   const findings = useMemo(() => severity === "All severities"
     ? allFindings
     : allFindings.filter((finding) => finding.severity === severity), [allFindings, severity]);
@@ -39,7 +41,18 @@ export default function Findings() {
   if (error) return <section className="page"><div className="form-error">{error}</div></section>;
 
   return <section className="page">
-    <div className="page-heading"><div><Link className="back-link" to="/dashboard"><ArrowLeft size={15} /> Overview</Link><span className="eyebrow">Scan {scanId}</span><h1>Vulnerability findings</h1><p className="muted">{allFindings.length} findings detected across {project?.name || "your API"}.</p></div><Link className="secondary-button" to={`/reports/${scanId}`}><Download size={16} /> Compliance report</Link></div>
+    <div className="page-heading"><div><Link className="back-link" to="/scans"><ArrowLeft size={15} /> Scan history</Link><span className="eyebrow">Saved scan details</span><h1>{project?.name || "API project"}</h1><p className="muted">Scan {scanId} · Started {scan?.startedAt || scan?.createdAt ? new Date(scan.startedAt || scan.createdAt).toLocaleString() : "date unavailable"}</p></div><Link className="secondary-button" to={`/reports/${scanId}`}><Download size={16} /> Compliance report</Link></div>
+    <div className="stat-grid scan-detail-stats">
+      <StatCard label="Scan status" value={scan.status} detail={scan.completedAt ? `Completed ${new Date(scan.completedAt).toLocaleString()}` : "Latest saved status"} />
+      <StatCard label="Security score" value={scan.overallScore ?? "—"} detail={scan.overallScore == null ? "Available when scan completes" : "Out of 100"} />
+      <StatCard label="Recorded findings" value={allFindings.length} detail="Saved for this scan" />
+      <StatCard label="Checks completed" value={`${completedModules} / ${scan.moduleProgress?.length || 0}`} detail="OWASP security checks" />
+    </div>
+    {scan.errorMessage && <div className="form-error" role="alert">Scan error: {scan.errorMessage}</div>}
+    {scan.moduleProgress?.length > 0 && <div className="progress-panel panel scan-details-progress">
+      <div className="progress-top"><strong>Saved check results</strong><span>{completedModules} of {scan.moduleProgress.length} completed</span></div>
+      <div className="module-list">{scan.moduleProgress.map(({ module, status }) => <div className={`module-row ${status === "completed" ? "done" : status === "running" ? "active" : status === "failed" ? "failed" : ""}`} key={module}><span>{module}</span><small>{status}</small></div>)}</div>
+    </div>}
     <div className="filter-bar"><span><SlidersHorizontal size={16} /> Filter results</span><select value={severity} onChange={(event) => setSeverity(event.target.value)}><option>All severities</option><option>Critical</option><option>High</option><option>Medium</option><option>Low</option></select><span className="filter-count">Showing {findings.length} of {allFindings.length}</span></div>
     <FindingsTable findings={findings} onSelect={setSelected} />
     {selected && <div className="drawer-backdrop" onClick={() => setSelected(null)}><aside className="finding-drawer" onClick={(event) => event.stopPropagation()}><button className="drawer-close" onClick={() => setSelected(null)} aria-label="Close finding details">×</button><SeverityBadge severity={selected.severity} /><h2>{selected.owaspCategory}</h2><code>{selected.method} {selected.endpoint}</code><h3>What we found</h3><p>{selected.description}</p><h3>Evidence</h3><p className="evidence-copy">{selected.evidence || "No additional evidence was recorded."}</p><h3>Recommended fix</h3><p>{selected.aiRecommendation || "No AI recommendation has been generated for this finding yet."}</p></aside></div>}

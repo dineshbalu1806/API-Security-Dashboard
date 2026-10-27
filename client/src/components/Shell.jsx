@@ -1,5 +1,5 @@
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
-import { Activity, FilePlus2, LayoutDashboard, LogOut, ShieldCheck } from "lucide-react";
+import { Activity, FilePlus2, History, LayoutDashboard, LogOut, ShieldCheck } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 
 export default function Shell() {
@@ -11,6 +11,7 @@ export default function Shell() {
       <div className="eyebrow">Workspace</div>
       <nav>
         <NavLink to="/dashboard"><LayoutDashboard size={17} /> Overview</NavLink>
+        <NavLink to="/scans"><History size={17} /> Scan history</NavLink>
         <NavLink to="/projects/new"><FilePlus2 size={17} /> New project</NavLink>
       </nav>
       <div className="sidebar-foot"><div className="profile"><div className="avatar">{user?.name?.[0] || "A"}</div><div><strong>{user?.name || "Analyst"}</strong><small>{user?.role || "Security team"}</small></div></div><button className="icon-button" title="Sign out" onClick={() => { signOut(); navigate("/login"); }}><LogOut size={17} /></button></div>

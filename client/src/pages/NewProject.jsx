@@ -4,7 +4,7 @@ import { ArrowLeft, ArrowRight, UploadCloud } from "lucide-react";
 import api from "../services/api";
 
 const getErrorMessage = (error) => {
-  if (error instanceof SyntaxError) return "OpenAPI spec must be valid JSON.";
+  if (error instanceof SyntaxError) return "OpenAPI spec and manual endpoints must be valid JSON.";
   if (error.code === "ECONNABORTED") {
     return "The scan request timed out. Check that the API server and Redis are running, then retry.";
   }
@@ -22,6 +22,10 @@ export default function NewProject() {
     apiBaseUrl: "",
     description: "",
     openApiSpec: "",
+    manualEndpoints: "",
+    authHeaderName: "",
+    authHeaderValue: "",
+    authorizationConfirmed: false,
   });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -42,6 +46,9 @@ export default function NewProject() {
         const payload = {
           ...form,
           openApiSpec: form.openApiSpec ? JSON.parse(form.openApiSpec) : undefined,
+          manualEndpoints: form.manualEndpoints
+            ? JSON.parse(form.manualEndpoints)
+            : undefined,
         };
         const { data } = await api.post("/projects", payload);
         projectId = data.project._id;
@@ -108,6 +115,27 @@ export default function NewProject() {
             />
           </label>
         </div>
+        <div className="form-grid">
+          <label>
+            Authentication header <span className="optional">Optional</span>
+            <input
+              placeholder="Authorization"
+              value={form.authHeaderName}
+              onChange={(event) => update("authHeaderName", event.target.value)}
+            />
+          </label>
+          <label>
+            Header value <span className="optional">Optional</span>
+            <input
+              type="password"
+              autoComplete="new-password"
+              placeholder="Bearer token or API key"
+              value={form.authHeaderValue}
+              onChange={(event) => update("authHeaderValue", event.target.value)}
+            />
+          </label>
+        </div>
+        <small className="form-help">Credentials are encrypted before storage and are only used by the scan worker. Configure PROJECT_CREDENTIALS_KEY on the server before saving credentials.</small>
         <label>
           Description <span className="optional">Optional</span>
           <textarea
@@ -136,6 +164,25 @@ export default function NewProject() {
             value={form.openApiSpec}
             onChange={(event) => update("openApiSpec", event.target.value)}
           />
+        </label>
+        <label>
+          Manual endpoint list <span className="optional">Optional</span>
+          <textarea
+            rows="4"
+            placeholder={'[{"path":"/users/42","method":"GET"}]'}
+            value={form.manualEndpoints}
+            onChange={(event) => update("manualEndpoints", event.target.value)}
+          />
+          <small className="form-help">Use concrete, read-only endpoint paths. When provided, this list is scanned instead of the OpenAPI paths.</small>
+        </label>
+        <label className="authorization-confirmation">
+          <input
+            type="checkbox"
+            checked={form.authorizationConfirmed}
+            onChange={(event) => update("authorizationConfirmed", event.target.checked)}
+            required
+          />
+          <span>I confirm that I own this API or have explicit authorization to test it.</span>
         </label>
         {error && <div className="form-error" role="alert">{error}</div>}
         <div className="form-actions">
