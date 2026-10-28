@@ -106,6 +106,9 @@ setup.
    - `PROJECT_CREDENTIALS_KEY`: a stable, base64-encoded 32-byte key.
    - `CLIENT_URL`: the exact public origin of the Vercel project, such as
      `https://api-security-dashboard.vercel.app`.
+   - `RESEND_API_KEY` and `RESEND_FROM_EMAIL`: required for password-reset
+     emails. Verify the sender domain in Resend and use an address on that
+     domain. Keep the API key private.
    - `ANTHROPIC_API_KEY`: optional, only for AI recommendations.
    - `VITE_API_URL`: the public HTTPS origin of the API project, without
      `/api`, for example `https://api-security-dashboard.vercel.app`.
@@ -113,6 +116,8 @@ setup.
      scan status and module progress are polled from the API.
    The API also allows this production domain and the active Vercel deployment
    origin for browser requests.
+   Password recovery is available from the sign-in screen. Reset links are
+   single-use and expire after one hour.
 3. Save the settings and redeploy. Confirm
    `https://api-security-dashboard.vercel.app/api/health` responds successfully.
    The root `vercel.json` also handles direct visits to SPA routes.

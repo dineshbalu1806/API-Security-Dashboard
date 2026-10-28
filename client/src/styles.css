@@ -203,6 +203,8 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 .upload-box textarea { grid-column: 1 / -1; background: #fff; }
 .form-actions { display: flex; justify-content: flex-end; gap: 10px; border-top: 1px solid var(--line); padding-top: 20px; margin-top: 14px; }
 .form-error { background: #ffefed; color: #a53e38; border: 1px solid #f2d0cd; border-radius: 7px; padding: 11px 12px; font-size: 12px; margin: 10px 0; }
+.form-success { background: #eef9f6; color: #176e62; border: 1px solid #cce9e2; border-radius: 7px; padding: 12px; font-size: 12px; line-height: 1.5; margin: 18px 0; }
+.auth-link-button { display: flex; align-items: center; justify-content: center; gap: 8px; text-decoration: none; }
 .centered-page { max-width: 830px; text-align: center; }
 .scan-hero { padding: 37px 0 28px; }
 .scan-orbit { display: grid; place-items: center; color: var(--teal); width: 74px; height: 74px; border-radius: 22px; border: 1px solid #b8ded9; background: #e7f6f3; margin: 0 auto 20px; animation: pulse 2s infinite; }

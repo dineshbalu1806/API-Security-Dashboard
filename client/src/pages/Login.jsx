@@ -65,6 +65,7 @@ export default function Login() {
           {error && <div className="form-error" role="alert">{error}</div>}
           <button className="primary-button full" disabled={busy}>{busy ? (isSignUp ? "Creating account..." : "Signing in...") : (isSignUp ? "Create account" : "Sign in")}<ArrowRight size={17} /></button>
         </form>
+        {!isSignUp && <button type="button" className="auth-switch" onClick={() => navigate("/forgot-password")}>Forgot your password?</button>}
         <button type="button" className="auth-switch" onClick={changeMode}>{isSignUp ? "Already have an account? Sign in" : "New to Sentinel? Create an account"}</button>
         {!isSignUp && <small className="form-note">Use your account credentials, or create an account to get started.</small>}
       </div>
