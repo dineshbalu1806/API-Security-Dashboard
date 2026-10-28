@@ -9,7 +9,31 @@
   },
   "rewrites": [
     {
-      "source": "/(.*)",
+      "source": "/login",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/dashboard",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/scans",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/projects/new",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/scan/:scanId",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/findings/:scanId",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/reports/:scanId",
       "destination": "/index.html"
     }
   ]
