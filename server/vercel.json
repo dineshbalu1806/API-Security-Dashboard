@@ -1,8 +1,0 @@
-{
-  "functions": {
-    "api/**/*.js": {
-      "maxDuration": 300,
-      "includeFiles": "node_modules/@sparticuz/chromium/bin/**"
-    }
-  }
-}

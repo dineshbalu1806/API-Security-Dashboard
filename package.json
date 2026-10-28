@@ -1,5 +1,11 @@
 {
-  "dependencies": {
-    "socket.io-client": "^4.8.4"
+  "name": "api-security-dashboard",
+  "private": true,
+  "workspaces": [
+    "client",
+    "server"
+  ],
+  "scripts": {
+    "build": "npm run build --workspace=api-security-dashboard-client"
   }
 }

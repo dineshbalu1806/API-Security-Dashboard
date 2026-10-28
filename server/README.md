@@ -106,9 +106,10 @@ All routes require a signed-in user and only return that user's scans.
 | POST | `/:id/generate-recommendations` | Generate optional AI recommendations |
 | GET | `/:id/report` | Download a completed scan's PDF report |
 
-The API must be running with MongoDB connected, and the scan worker and Redis
-must be available for scans to complete. `GET /api/health` returns HTTP 503
-until MongoDB is ready.
+The API must be running with MongoDB connected. Local and Render deployments
+also need the scan worker and Redis; the Vercel deployment uses bounded
+function background work instead. `GET /api/health` returns HTTP 503 until
+MongoDB is ready.
 
 ## Deployment
 
@@ -120,28 +121,25 @@ same `JWT_SECRET` and `PROJECT_CREDENTIALS_KEY` values for the API and worker.
 Configure `VITE_API_URL` on the static site to the API service host. Set
 Anthropic variables only if AI recommendations are needed.
 
-### Vercel API
+### Vercel
 
-The API can also run as Vercel Functions without Redis or a separate worker.
-Import the repository as a Vercel project with **Root Directory** set to
-`server`. Set `MONGO_URI`, `JWT_SECRET`, `PROJECT_CREDENTIALS_KEY`, and
-`CLIENT_URL` in the API project's private environment settings. The frontend
-must be deployed as a separate Vercel project rooted at `client`, with
-`VITE_API_URL` set to the API origin and `VITE_API_MODE=serverless`.
+The full application can run in one Vercel project. Set the project **Root
+Directory** to the repository root so Vercel uses the root `vercel.json`,
+builds the client workspace, and discovers the API function in `api/`. Set
+`MONGO_URI`, `JWT_SECRET`, `PROJECT_CREDENTIALS_KEY`, and `CLIENT_URL` in the
+Vercel project's private environment settings. Set the frontend build
+variables `VITE_API_URL` to the project's HTTPS origin and
+`VITE_API_MODE=serverless`.
 
 Vercel does not provide this app's Socket.IO server or persistent BullMQ worker
 model. In this deployment, scans run as bounded function background work and
-the frontend polls MongoDB-backed progress. `server/vercel.json` configures a
+the frontend polls MongoDB-backed progress. The root `vercel.json` configures a
 300-second function limit, and scans stop with a failed status before that
 limit when they have not completed. Larger scans may therefore need fewer
 endpoints or a persistent worker deployment.
 
-The frontend can instead be deployed to Vercel with the Vercel project root
-set to `client`. Set its `VITE_API_URL` to the public HTTPS API origin and set
-the API's `CLIENT_URL` to the exact Vercel site origin. Keep the API and scan
-worker on persistent hosting: the worker consumes Redis jobs, and scan
-progress uses Socket.IO, so a Vercel frontend deployment does not replace
-those services. See the root README's Vercel instructions for setup details.
+See the root README for instructions to deploy both the frontend and API
+entirely on Vercel.
 
 ## Data models
 
