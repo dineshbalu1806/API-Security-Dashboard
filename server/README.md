@@ -37,6 +37,14 @@ cd server
 npm run worker
 ```
 
+If you cannot sign in and email-based password recovery is not configured, run
+`npm run reset-password` from the `server` directory in an interactive
+terminal. It loads `server/.env`, displays the database host and name for
+confirmation, prompts for the account email, and reads the new password
+without echoing it. Use the Atlas URI in `MONGO_URI` to reset the deployed
+account; otherwise it updates only the database selected by the local
+configuration. The password is saved as a bcrypt hash.
+
 Set `REDIS_URL` for managed Redis, including `rediss://` URLs. Otherwise use
 `REDIS_HOST`, `REDIS_PORT`, and optionally `REDIS_PASSWORD`. Set a unique,
 strong `JWT_SECRET`. `PROJECT_CREDENTIALS_KEY` is required when saving API
@@ -77,6 +85,8 @@ require `Authorization: Bearer <JWT>`.
 | --- | --- | --- | --- |
 | POST | `/signup` | Public | `{ name, email, password }` |
 | POST | `/login` | Public | `{ email, password }` |
+| POST | `/forgot-password` | Public | `{ email }` |
+| POST | `/reset-password` | Public | `{ token, password }` |
 | GET | `/me` | Private | — |
 
 ### Projects — `/api/projects`
