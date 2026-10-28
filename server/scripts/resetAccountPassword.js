@@ -61,7 +61,10 @@ const run = async () => {
   }
 
   const uri = new URL(process.env.MONGO_URI);
-  const database = decodeURIComponent(uri.pathname.replace(/^\/+/, "")) || "(default database)";
+  const database =
+    decodeURIComponent(uri.pathname.replace(/^\/+/, "")) ||
+    uri.searchParams.get("dbName") ||
+    "test";
   console.log(`Database target: ${uri.hostname} / ${database}`);
   const confirmation = await ask("Type RESET to change a password in this database: ");
   if (confirmation !== "RESET") {
