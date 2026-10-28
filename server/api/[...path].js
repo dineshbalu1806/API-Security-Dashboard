@@ -4,12 +4,13 @@ const connectDB = require("../config/db");
 module.exports = async (req, res) => {
   try {
     await connectDB();
-    return app(req, res);
   } catch (error) {
-    console.error("Unable to handle API request", error);
+    console.error("MongoDB unavailable for Vercel API request", error);
     return res.status(503).json({
       success: false,
-      message: "API is temporarily unavailable",
+      message: "Database unavailable. Check MONGO_URI and the Atlas network allowlist.",
     });
   }
+
+  return app(req, res);
 };
