@@ -29,15 +29,17 @@ export default function useScanProgress(scanId) {
     };
 
     refresh();
-    const socket = io(socketUrl, {
-      auth: { token: localStorage.getItem("sentinel_token") },
-      reconnection: true,
-    });
-    socket.on("connect", () => socket.emit("scan:join", scanId));
-    socket.on("scan:state", (state) => {
+    const socket = import.meta.env.VITE_API_MODE === "serverless"
+      ? null
+      : io(socketUrl, {
+        auth: { token: localStorage.getItem("sentinel_token") },
+        reconnection: true,
+      });
+    socket?.on("connect", () => socket.emit("scan:join", scanId));
+    socket?.on("scan:state", (state) => {
       setScan((current) => current ? { ...current, ...state } : state);
     });
-    socket.on("scan:progress", (event) => {
+    socket?.on("scan:progress", (event) => {
       setScan((current) => {
         if (!current) return current;
         const moduleProgress = current.moduleProgress || [];
@@ -54,7 +56,7 @@ export default function useScanProgress(scanId) {
     return () => {
       active = false;
       window.clearInterval(pollTimer);
-      socket.disconnect();
+      socket?.disconnect();
     };
   }, [scanId]);
 

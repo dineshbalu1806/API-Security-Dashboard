@@ -15,6 +15,21 @@ Copy-Item .env.example .env
 npm run dev
 ```
 
+For MongoDB Atlas, create a database user and allow your development machine's
+IP address under Atlas Network Access. In **Connect → Drivers**, copy the
+connection string and set `MONGO_URI` in `server/.env`, using a database name
+such as `api_security_dashboard`:
+
+```text
+mongodb+srv://<database-user>:<url-encoded-password>@<cluster-host>/api_security_dashboard?retryWrites=true&w=majority
+```
+
+Replace the placeholders with your Atlas values and URL-encode special
+characters in the password. Keep this URI in the server's ignored `.env` file;
+never put it in frontend configuration or commit it. Restrict the Atlas
+network allowlist rather than allowing access from anywhere. The local MongoDB
+URI in `.env.example` is an alternative for a local database.
+
 Run the worker in a second terminal:
 
 ```powershell
@@ -104,6 +119,22 @@ be provisioned separately. Configure `MONGO_URI`, `JWT_SECRET`,
 same `JWT_SECRET` and `PROJECT_CREDENTIALS_KEY` values for the API and worker.
 Configure `VITE_API_URL` on the static site to the API service host. Set
 Anthropic variables only if AI recommendations are needed.
+
+### Vercel API
+
+The API can also run as Vercel Functions without Redis or a separate worker.
+Import the repository as a Vercel project with **Root Directory** set to
+`server`. Set `MONGO_URI`, `JWT_SECRET`, `PROJECT_CREDENTIALS_KEY`, and
+`CLIENT_URL` in the API project's private environment settings. The frontend
+must be deployed as a separate Vercel project rooted at `client`, with
+`VITE_API_URL` set to the API origin and `VITE_API_MODE=serverless`.
+
+Vercel does not provide this app's Socket.IO server or persistent BullMQ worker
+model. In this deployment, scans run as bounded function background work and
+the frontend polls MongoDB-backed progress. `server/vercel.json` configures a
+300-second function limit, and scans stop with a failed status before that
+limit when they have not completed. Larger scans may therefore need fewer
+endpoints or a persistent worker deployment.
 
 The frontend can instead be deployed to Vercel with the Vercel project root
 set to `client`. Set its `VITE_API_URL` to the public HTTPS API origin and set

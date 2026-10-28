@@ -2,10 +2,11 @@ const mongoose = require("mongoose");
 const Project = require("../models/Project");
 const Scan = require("../models/Scan");
 const Finding = require("../models/Finding");
-const { scanQueue } = require("../queue/scanQueue");
 const { asyncHandler } = require("../middleware/errorHandler");
 const { generateRecommendation } = require("../services/aiRecommendation");
 const { generateScanReport } = require("../services/reportGenerator");
+const { runScan } = require("../services/runScan");
+const { waitUntil } = require("@vercel/functions");
 
 const modules = [
   "BOLA",
@@ -36,14 +37,24 @@ const createScan = asyncHandler(async (req, res) => {
     moduleProgress: modules.map((module) => ({ module, status: "pending" })),
   });
 
-  try {
-    await scanQueue.add("scan-project", { scanId: scan._id.toString() }, { jobId: scan._id.toString() });
-  } catch (error) {
-    await Scan.findByIdAndUpdate(scan._id, {
-      status: "failed",
-      errorMessage: "Unable to queue scan",
-    });
-    throw error;
+  if (process.env.VERCEL) {
+    waitUntil(
+      runScan({ scanId: scan._id.toString(), maxDurationMs: 270_000 })
+        .catch((error) => {
+          console.error(`Vercel scan ${scan._id} failed`, error);
+        })
+    );
+  } else {
+    try {
+      const { scanQueue } = require("../queue/scanQueue");
+      await scanQueue.add("scan-project", { scanId: scan._id.toString() }, { jobId: scan._id.toString() });
+    } catch (error) {
+      await Scan.findByIdAndUpdate(scan._id, {
+        status: "failed",
+        errorMessage: "Unable to queue scan",
+      });
+      throw error;
+    }
   }
 
   res.status(202).json({ success: true, scanId: scan._id, scan });

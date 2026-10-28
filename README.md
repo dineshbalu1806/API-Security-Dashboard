@@ -23,7 +23,22 @@ Prerequisites: Node.js, MongoDB, and Redis.
    Copy-Item .env.example .env
    ```
 
-   Set `MONGO_URI`, a unique `JWT_SECRET`, and Redis settings in `server/.env`.
+   To connect to MongoDB Atlas, create a database user in Atlas, allow your
+   development machine's IP address under Network Access, then choose
+   **Connect → Drivers** to get the connection string. Replace its username,
+   password, and cluster host as needed, and include a database name:
+
+   ```text
+   mongodb+srv://<database-user>:<url-encoded-password>@<cluster-host>/api_security_dashboard?retryWrites=true&w=majority
+   ```
+
+   Put the completed URI in `MONGO_URI` in `server/.env` (not in the frontend
+   or source code). URL-encode special characters in the database user's
+   password. Keep the network allowlist restricted; avoid allowing access from
+   anywhere. The local MongoDB URI in `.env.example` can be used instead when
+   running MongoDB locally.
+
+   Set a unique `JWT_SECRET` and Redis settings in `server/.env`.
    Generate `PROJECT_CREDENTIALS_KEY` with:
 
    ```powershell
@@ -72,33 +87,44 @@ worker, and Redis Key Value service. Before deploying:
 The API health endpoint is `/api/health`. Use HTTPS for production API targets.
 Keep MongoDB and Redis credentials private and restrict their network access.
 
-## Deploy the frontend on Vercel
+## Deploy the full app on Vercel
 
-Vercel hosts the Vite frontend. The Express API, MongoDB, Redis, and BullMQ scan
-worker must be deployed separately on services that support a persistent Node
-process, Redis, and Socket.IO (for example, the API and worker services in
-`render.yaml`). Vercel Functions are not a replacement for this worker/runtime.
+The frontend and API are deployed as two Vercel projects from this repository.
+MongoDB Atlas remains the database. The Vercel API uses serverless functions
+and does not need Redis, BullMQ, or a separately deployed worker. Scan progress
+is read from MongoDB by polling; Socket.IO is not available in this setup.
 
-1. Import this repository into Vercel and set **Root Directory** to `client`.
-2. Use the Vite defaults: build command `npm run build` and output directory
-   `dist`. `client/vercel.json` provides the SPA fallback for direct visits to
-   routes such as `/dashboard` and `/scan/<id>`.
-3. Add the Vercel environment variable `VITE_API_URL` with the public HTTPS
-   origin of the deployed API, such as `https://your-api.example.com` (or its
-   `/api` URL). Set it for Production and Preview as appropriate, then
-   redeploy. This value is embedded in the client build and must not contain
-   secrets.
-4. On the API service, set `CLIENT_URL` to the exact deployed Vercel origin
-   (for example, `https://your-app.vercel.app`) so both API CORS and
-   Socket.IO accept the frontend. If using a custom domain, set that origin
-   instead. The backend still needs `MONGO_URI`, `JWT_SECRET`,
-   `PROJECT_CREDENTIALS_KEY`, and `REDIS_URL`; the separate worker needs the
-   same database, Redis, and encryption/JWT settings.
-5. Confirm `https://your-api.example.com/api/health` responds successfully,
-   then test sign-in and scan progress from the deployed frontend.
+1. Import the repository into Vercel for the API project and set **Root
+   Directory** to `server`. Vercel detects `server/api/[...path].js` as the API
+   function. Set these server environment variables for Production (and
+   Preview if needed):
+   - `MONGO_URI`: the private Atlas connection string.
+   - `JWT_SECRET`: a unique, strong secret.
+   - `PROJECT_CREDENTIALS_KEY`: a stable, base64-encoded 32-byte key.
+   - `CLIENT_URL`: the exact public origin of the frontend project, such as
+     `https://api-security-dashboard.vercel.app`.
+   - `ANTHROPIC_API_KEY`: optional, only for AI recommendations.
+2. Deploy the API project and confirm
+   `https://<api-project>.vercel.app/api/health` responds successfully.
+3. In the frontend Vercel project, keep **Root Directory** set to `client`.
+   Use build command `npm run build` and output directory `dist`.
+   `client/vercel.json` handles direct visits to SPA routes.
+4. Set these frontend environment variables in the frontend project:
+   - `VITE_API_URL`: the public HTTPS origin of the API project, without
+     `/api`, for example `https://<api-project>.vercel.app`.
+   - `VITE_API_MODE=serverless`: disables the unsupported Socket.IO connection;
+     scan status and module progress are polled from the API.
+   Redeploy the frontend after setting these build-time values.
+5. Create an account and verify sign-in, project creation, and a scan. Vercel
+   runs scans as bounded background work in the API function; scans exceeding
+   the configured time budget fail with an explanation, so reduce the endpoint
+   count for larger APIs.
 
-For local Vercel builds, copy `client/.env.example` to `client/.env.local` and
-set `VITE_API_URL` to your running API.
+Keep all backend secrets in the API project's environment settings, never in
+`VITE_` variables or the frontend project. The API function's maximum duration
+is set to 300 seconds in `server/vercel.json`; the Vercel plan must permit this.
+For local Vercel frontend builds, copy `client/.env.example` to
+`client/.env.local` and set `VITE_API_URL` to the API origin.
 
 ## Important scope
 
