@@ -165,6 +165,7 @@ const forgotPassword = asyncHandler(async (req, res) => {
     } catch (cleanupError) {
       console.error("Unable to clear an undelivered password reset token", cleanupError.name);
     }
+    throw error;
   }
 
   return res.status(200).json({ success: true, message: PASSWORD_RESET_MESSAGE });
