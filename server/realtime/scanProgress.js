@@ -4,13 +4,14 @@ const { Server } = require("socket.io");
 const Scan = require("../models/Scan");
 const User = require("../models/User");
 const { connection } = require("../queue/scanQueue");
+const getClientOrigins = require("../config/clientOrigins");
 
 const progressChannel = "api-security-scan-progress";
 
 const initScanProgress = (httpServer) => {
   const io = new Server(httpServer, {
     cors: {
-      origin: process.env.CLIENT_URL || "http://localhost:5173",
+      origin: getClientOrigins(),
       credentials: true,
     },
   });

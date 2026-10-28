@@ -130,6 +130,9 @@ builds the client workspace, and discovers the API function in `api/`. Set
 Vercel project's private environment settings. Set the frontend build
 variables `VITE_API_URL` to the project's HTTPS origin and
 `VITE_API_MODE=serverless`.
+The API CORS policy allows the configured `CLIENT_URL`, the production
+`api-security-dashboard.vercel.app` domain, the active Vercel deployment
+origin, and localhost for development.
 
 Vercel does not provide this app's Socket.IO server or persistent BullMQ worker
 model. In this deployment, scans run as bounded function background work and

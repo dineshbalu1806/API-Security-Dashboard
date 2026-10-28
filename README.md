@@ -111,6 +111,8 @@ setup.
      `/api`, for example `https://api-security-dashboard.vercel.app`.
    - `VITE_API_MODE=serverless`: disables the unsupported Socket.IO connection;
      scan status and module progress are polled from the API.
+   The API also allows this production domain and the active Vercel deployment
+   origin for browser requests.
 3. Save the settings and redeploy. Confirm
    `https://api-security-dashboard.vercel.app/api/health` responds successfully.
    The root `vercel.json` also handles direct visits to SPA routes.

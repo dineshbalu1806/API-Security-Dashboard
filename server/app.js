@@ -3,6 +3,7 @@ const cors = require("cors");
 const morgan = require("morgan");
 const helmet = require("helmet");
 const { errorHandler } = require("./middleware/errorHandler");
+const getClientOrigins = require("./config/clientOrigins");
 
 const authRoutes = require("./routes/authRoutes");
 const projectRoutes = require("./routes/projectRoutes");
@@ -13,7 +14,7 @@ const app = express();
 app.use(helmet());
 app.use(
   cors({
-    origin: process.env.CLIENT_URL || "http://localhost:5173",
+    origin: getClientOrigins(),
     credentials: true,
   })
 );
